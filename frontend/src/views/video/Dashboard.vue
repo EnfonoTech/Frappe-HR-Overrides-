@@ -1,11 +1,11 @@
 <template>
-	<BaseLayout :pageTitle="__('Salary Slips')">
+	<BaseLayout :pageTitle="__('Video')">
 		<template #body>
 			  <div class="video-page">
 				<h1>Welcome to the Video Page</h1>
 				<iframe
-				width="560"
-				height="315"
+				width="380"
+				height="215"
 				src="https://www.youtube.com/embed/dQw4w9WgXcQ"
 				title="YouTube video"
 				frameborder="0"
