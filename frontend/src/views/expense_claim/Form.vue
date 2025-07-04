@@ -2,6 +2,7 @@
 	<ion-page>
 		<ion-content :fullscreen="true">
 			<FormView
+				:key="formKey"
 				v-if="formFields.data"
 				doctype="Expense Claim"
 				v-model="expenseClaim"
@@ -10,12 +11,13 @@
 				:id="props.id"
 				:tabbedView="true"
 				:tabs="tabs"
-				:showAttachmentView="true"
+				:showAttachmentView="!hideExpensesAndAttachments"
 				@validateForm="validateForm"
 			>
 				<!-- Child Tables -->
 				<template #expenses="{ isFormReadOnly }">
 					<ExpensesTable
+						v-if="!hideExpensesAndAttachments"
 						v-model:expenseClaim="expenseClaim"
 						:currency="currency"
 						:isReadOnly="isReadOnly || isFormReadOnly"
@@ -26,22 +28,26 @@
 				</template>
 
 				<template #taxes="{ isFormReadOnly }">
-					<ExpenseTaxesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-						@addExpenseTax="addExpenseTax"
-						@updateExpenseTax="updateExpenseTax"
-						@deleteExpenseTax="deleteExpenseTax"
-					/>
+					<div v-show="false">
+						<ExpenseTaxesTable
+							v-model:expenseClaim="expenseClaim"
+							:currency="currency"
+							:isReadOnly="isReadOnly || isFormReadOnly"
+							@addExpenseTax="addExpenseTax"
+							@updateExpenseTax="updateExpenseTax"
+							@deleteExpenseTax="deleteExpenseTax"
+						/>
+					</div>
 				</template>
 
 				<template #advances="{ isFormReadOnly }">
-					<ExpenseAdvancesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-					/>
+					<div v-show="false">
+						<ExpenseAdvancesTable
+							v-model:expenseClaim="expenseClaim"
+							:currency="currency"
+							:isReadOnly="isReadOnly || isFormReadOnly"
+						/>
+					</div>
 				</template>
 			</FormView>
 		</ion-content>
@@ -72,12 +78,22 @@ const props = defineProps({
 	},
 })
 
-const tabs = [
-	{ name: "Expenses", lastField: "taxes" },
-	{ name: "Advances", lastField: "advances" },
-	{ name: "Totals", lastField: "cost_center" },
-]
+const tabs = computed(() => {
+	const isDraft = expenseClaim.value.docstatus === 0
+	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance"
 
+	return [
+		{
+			name: isDraft && isTripAllowance ? "Trip Allowance" : "Expenses",
+			lastField: "cost_center",
+		},
+	]
+})
+const formKey = computed(() => {
+	const isDraft = expenseClaim.value.docstatus === 0
+	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance"
+	return isDraft && isTripAllowance ? "trip-allowance-form" : "default-expense-form"
+})
 // object to store form data
 const expenseClaim = ref({
 	employee: employee.data.name,
@@ -85,7 +101,12 @@ const expenseClaim = ref({
 })
 
 const currency = computed(() => getCompanyCurrency(expenseClaim.value.company))
-
+const hideExpensesAndAttachments = computed(() => {
+	return (
+		expenseClaim.value.docstatus === 0 &&
+		expenseClaim.value.custom_expense_claim_type === "Trip Allowance"
+	)
+})
 // get form fields
 const formFields = createResource({
 	url: "hrms.api.get_doctype_fields",
@@ -177,7 +198,12 @@ watch(
 		}
 	}
 )
-
+watch(
+	() => expenseClaim.value.custom_expense_claim_type,
+	() => {
+		formFields.data = formFields.data.map(applyFilters)
+	}
+)
 watch(
 	() => expenseClaim.value.advances,
 	(_value) => {
@@ -204,22 +230,14 @@ function getFilteredFields(fields) {
 		"task",
 		"taxes_and_charges_sb",
 		"advance_payments_sb",
-		"accounting_dimensions_section",	
+		"accounting_dimensions_section",
+		"transactions_section",
+		"accounting_details",		
 	]
 	const extraFields = [
-		"employee",
 		"employee_name",
-		"department",
-		"remark",
-		"is_paid",
-		"mode_of_payment",
-		"clearance_date",
+		"posting_date",
 		"approval_status",
-		"custom_from",
-		"custom_to",
-		"custom_distance_in_km",
-		"custom_jobsitehospital_name",
-		"custom_expense_claim_type",
 	]
 
 	if (!props.id) excludeFields.push(...extraFields)
@@ -228,6 +246,27 @@ function getFilteredFields(fields) {
 }
 
 function applyFilters(field) {
+	const isDraft = expenseClaim.value.docstatus === 0;
+	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance";
+
+	if (["custom_from", "custom_to","custom_expense_claim_type","custom_distance_in_km","custom_jobsitehospital_name","custom_trip_amount","custom_number_of_trip"].includes(field.fieldname)) {
+		// Show only in draft and only if claim type is "Trip Allowance"
+		field.hidden = !(isDraft && isTripAllowance);
+	}
+	if (["custom_expense_claim_type",].includes(field.fieldname)) {
+		// Show only in draft and only if claim type is "Trip Allowance"
+		field.read_only = (isDraft && isTripAllowance);
+	}
+	if (["total_sanctioned_amount",].includes(field.fieldname)) {
+		// Show only in draft and only if claim type is "Trip Allowance"
+		field.hidden = (isDraft && isTripAllowance);
+	}
+	if (["mode_of_payment","grand_total","is_paid","clearance_date","remark","employee","department",].includes(field.fieldname)) {
+			field.hidden = true
+		}
+	if (["posting_date",].includes(field.fieldname)) {
+			field.read_only = true
+		}
 	if (field.fieldname === "cost_center") {
 		field.hidden = true  // Hides the field from the form
 	}

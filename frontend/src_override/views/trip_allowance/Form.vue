@@ -10,38 +10,44 @@
 				:id="props.id"
 				:tabbedView="true"
 				:tabs="tabs"
-				:showAttachmentView="true"
+				:showAttachmentView="false"
 				@validateForm="validateForm"
 			>
 				<!-- Child Tables -->
 				<template #expenses="{ isFormReadOnly }">
-					<ExpensesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-						@addExpenseItem="addExpenseItem"
-						@updateExpenseItem="updateExpenseItem"
-						@deleteExpenseItem="deleteExpenseItem"
-					/>
+					<div v-show="false">
+						<ExpensesTable
+							v-model:expenseClaim="expenseClaim"
+							:currency="currency"
+							:isReadOnly="isReadOnly || isFormReadOnly"
+							@addExpenseItem="addExpenseItem"
+							@updateExpenseItem="updateExpenseItem"
+							@deleteExpenseItem="deleteExpenseItem"
+						/>
+					</div>
 				</template>
 
 				<template #taxes="{ isFormReadOnly }">
-					<ExpenseTaxesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-						@addExpenseTax="addExpenseTax"
-						@updateExpenseTax="updateExpenseTax"
-						@deleteExpenseTax="deleteExpenseTax"
-					/>
+					<div v-show="false">
+						<ExpenseTaxesTable
+							v-model:expenseClaim="expenseClaim"
+							:currency="currency"
+							:isReadOnly="isReadOnly || isFormReadOnly"
+							@addExpenseTax="addExpenseTax"
+							@updateExpenseTax="updateExpenseTax"
+							@deleteExpenseTax="deleteExpenseTax"
+						/>
+					</div>
 				</template>
 
 				<template #advances="{ isFormReadOnly }">
-					<ExpenseAdvancesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-					/>
+					<div v-show="false">
+						<ExpenseAdvancesTable
+							v-model:expenseClaim="expenseClaim"
+							:currency="currency"
+							:isReadOnly="isReadOnly || isFormReadOnly"
+						/>
+					</div>
 				</template>
 			</FormView>
 		</ion-content>
@@ -73,9 +79,7 @@ const props = defineProps({
 })
 
 const tabs = [
-	{ name: "Expenses", lastField: "taxes" },
-	{ name: "Advances", lastField: "advances" },
-	{ name: "Totals", lastField: "cost_center" },
+	{ name: "Trip Allowance", lastField: "cost_center" },
 ]
 
 // object to store form data
@@ -94,6 +98,7 @@ const formFields = createResource({
 		let fields = getFilteredFields(data)
 
 		return fields.map((field) => {
+			
 			if (field.fieldname === "posting_date") field.default = today
 			if (field.fieldname === "custom_expense_claim_type") {
 				field.default = "Trip Allowance"
@@ -208,7 +213,9 @@ function getFilteredFields(fields) {
 		"task",
 		"taxes_and_charges_sb",
 		"advance_payments_sb",
-		"accounting_dimensions_section",	
+		"accounting_dimensions_section",
+		"transactions_section",
+		"accounting_details",	
 	]
 	const extraFields = [
 		"employee",
@@ -227,6 +234,11 @@ function getFilteredFields(fields) {
 }
 
 function applyFilters(field) {
+	
+
+	if (["posting_date","grand_total"].includes(field.fieldname)) {
+			field.hidden = true
+		}
 	if (field.fieldname === "cost_center") {
 		field.hidden = true  
 	}

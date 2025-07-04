@@ -206,14 +206,43 @@ const expensesTableFields = createResource({
 		return data
 			.filter((field) => !excludeFields.includes(field.fieldname))
 			.map((field) => {
-				if (["cost_center", "project"].includes(field.fieldname)) {
-					field.hidden = true // 👈 hide these two fields
+				if (["cost_center", "project","custom_purchase_invoice","custom_tax_account","custom_vat"].includes(field.fieldname)) {
+					field.hidden = true // hide fields
+				}
+	
+				if (["custom_purchase_bill_number", "custom_invoice_number"].includes(field.fieldname)) {
+					field.hidden = true
+				}
+
+				      // Dynamically hide based on bill_type
+				if (["custom_purchase_bill_number","custom_vat_amount","custom_expense_amount"].includes(field.fieldname)) {
+					field.hidden = expenseItem.value.custom_bill_type !== "Company Name"
+				}
+
+				if (["custom_invoice_number"].includes(field.fieldname)) {
+					field.hidden = expenseItem.value.custom_bill_type !== "Other Name"
 				}
 				return field
 			})
 	},
 })
-
+watch(() => expenseItem.value.custom_bill_type, () => {
+  expensesTableFields.reload()
+})
+watch(
+  () => [
+    expenseItem.value.custom_expense_amount,
+    expenseItem.value.custom_vat_amount,
+    expenseItem.value.custom_bill_type
+  ],
+  () => {
+    if (expenseItem.value.custom_bill_type === "Company Name") {
+      const expense = parseFloat(expenseItem.value.custom_expense_amount || 0)
+      const vat = parseFloat(expenseItem.value.custom_vat_amount || 0)
+      expenseItem.value.amount = expense + vat
+    }
+  }
+)
 expensesTableFields.reload()
 
 const modalTitle = computed(() => {
