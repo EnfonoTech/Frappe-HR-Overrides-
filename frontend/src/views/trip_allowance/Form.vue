@@ -65,6 +65,7 @@ import ExpenseTaxesTable from "@/components/ExpenseTaxesTable.vue"
 import ExpenseAdvancesTable from "@/components/ExpenseAdvancesTable.vue"
 
 import { getCompanyCurrency } from "@/data/currencies"
+import { call } from "frappe-ui"
 
 const dayjs = inject("$dayjs")
 const employee = inject("$employee")
@@ -84,10 +85,13 @@ const tabs = [
 
 // object to store form data
 const expenseClaim = ref({
-	employee: employee.data.name,
-	company: employee.data.company,
+  employee: employee.data.name,
+  company: employee.data.company,
+  custom_trip_location: "",
+  custom_from: "",
+  custom_to: "",
+  custom_distance_in_km: 0,
 })
-
 const currency = computed(() => getCompanyCurrency(expenseClaim.value.company))
 
 // get form fields
@@ -203,6 +207,127 @@ watch(
 		})
 	}
 )
+
+watch(
+  () => expenseClaim.value.custom_trip_location,
+  async (trip_location) => {
+    if (!trip_location) return;
+
+    try {
+      console.log("Watcher triggered with Trip Location:", trip_location);
+
+      // Fetch Trip Location record
+      const res = await call("frappe.client.get_list", {
+        doctype: "Trip Location",
+        filters: { name: trip_location },
+        fields: ["from", "to", "distancekm"],
+        limit_page_length: 1,
+      });
+
+      console.log("Trip Location API Response:", res);
+
+      if (!res || !res.length) {
+        console.warn("Trip Location not found:", trip_location);
+        expenseClaim.value.custom_from = "";
+        expenseClaim.value.custom_to = "";
+        expenseClaim.value.custom_distance_in_km = "";
+        return;
+      }
+
+      const data = res[0];
+
+      // Update expenseClaim fields reactively
+      expenseClaim.value.custom_from = data.from || "";
+      expenseClaim.value.custom_to = data.to || "";
+      expenseClaim.value.custom_distance_in_km = data.distancekm || "";
+
+      console.log("Updated expenseClaim after Trip Location fetch:", {
+        custom_from: expenseClaim.value.custom_from,
+        custom_to: expenseClaim.value.custom_to,
+        custom_distance_in_km: expenseClaim.value.custom_distance_in_km
+      });
+      // Trigger trip amount calculation
+      calculateTripAmount();
+
+    } catch (err) {
+      console.error("Error fetching Trip Location:", err);
+    }
+  }
+);
+
+watch(
+  () => expenseClaim.value.custom_holiday,
+  () => {
+    console.log("Holiday changed:", expenseClaim.value.custom_holiday);
+    calculateTripAmount();
+  }
+);
+
+function calculateTripAmount() {
+  const employee = expenseClaim.value.employee;
+  const distance = expenseClaim.value.custom_distance_in_km;
+  const is_holiday = expenseClaim.value.custom_holiday === "Yes";
+  let trip_amount = 0;
+
+  console.log("Calculating trip amount with:", {
+    employee,
+    distance,
+    is_holiday
+  });
+
+  if (!employee || !distance) {
+    console.warn("Employee or distance not set, skipping calculation.");
+    return;
+  }
+  call("frappe.client.get_value", {
+	doctype: "Employee",
+	filters: { name: expenseClaim.value.employee },
+	fieldname: "designation"
+	}).then(res => {
+	console.log("Raw response:", res);
+
+	// Access directly
+	const designation = res?.designation;	
+
+	console.log("Extracted designation:", designation);
+
+	if (!designation) {
+		console.warn("Employee designation not found for", expenseClaim.value.employee);
+		return;
+	}
+
+	const is_driver = ["Pick Up Driver", "Heavy Truck Driver"].includes(designation);
+	const distance = expenseClaim.value.custom_distance_in_km;
+	const is_holiday = expenseClaim.value.custom_holiday === "Yes";
+
+	let trip_amount = 0;
+
+	if (is_driver) {
+		if (is_holiday) {
+		if (distance === "300-500") trip_amount = 150;
+		else if (distance === "501-1000") trip_amount = 175;
+		else if (distance === "1000+") trip_amount = 250;
+		} else {
+		if (distance === "300-500") trip_amount = 100;
+		else if (distance === "501-1000") trip_amount = 125;
+		else if (distance === "1000+") trip_amount = 185;
+		}
+	} else {
+		if (is_holiday) {
+		if (distance === "300-500") trip_amount = 100;
+		else if (distance === "501-1000") trip_amount = 150;
+		else if (distance === "1000+") trip_amount = 200;
+		} else {
+		if (distance === "300-500") trip_amount = 75;
+		else if (distance === "501-1000") trip_amount = 100;
+		else if (distance === "1000+") trip_amount = 140;
+		}
+	}
+
+	expenseClaim.value.custom_trip_amount = trip_amount;
+	console.log("Calculated trip amount:", trip_amount);
+	});
+}
 
 // helper functions
 function getFilteredFields(fields) {

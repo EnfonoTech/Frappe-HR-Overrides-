@@ -249,7 +249,7 @@ function applyFilters(field) {
 	const isDraft = expenseClaim.value.docstatus === 0;
 	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance";
 
-	if (["custom_from", "custom_to","custom_expense_claim_type","custom_distance_in_km","custom_jobsitehospital_name","custom_trip_amount","custom_number_of_trip"].includes(field.fieldname)) {
+	if (["custom_from", "custom_to","custom_expense_claim_type","custom_distance_in_km","custom_jobsitehospital_name","custom_trip_amount","custom_number_of_trip","custom_holiday","custom_trip_location"].includes(field.fieldname)) {
 		// Show only in draft and only if claim type is "Trip Allowance"
 		field.hidden = !(isDraft && isTripAllowance);
 	}
