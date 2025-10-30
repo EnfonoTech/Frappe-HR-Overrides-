@@ -80,19 +80,41 @@ const props = defineProps({
 
 const tabs = computed(() => {
 	const isDraft = expenseClaim.value.docstatus === 0
-	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance"
+	const type = expenseClaim.value.custom_expense_claim_type
+
+	let name = "Expenses"
+
+	if (isDraft && type === "Trip Allowance") {
+		name = "Trip Allowance"
+	} else if (isDraft && type === "Food Allowance") {
+		name = "Food Allowance"
+	}
 
 	return [
 		{
-			name: isDraft && isTripAllowance ? "Trip Allowance" : "Expenses",
+			name,
 			lastField: "cost_center",
 		},
 	]
 })
 const formKey = computed(() => {
 	const isDraft = expenseClaim.value.docstatus === 0
-	const isTripAllowance = expenseClaim.value.custom_expense_claim_type === "Trip Allowance"
-	return isDraft && isTripAllowance ? "trip-allowance-form" : "default-expense-form"
+	const type = expenseClaim.value.custom_expense_claim_type
+
+	if (!isDraft) {
+		// Non-draft should always show default
+		return "default-expense-form"
+	}
+
+	if (type === "Trip Allowance") {
+		return "trip-allowance-form"
+	}
+
+	if (type === "Food Allowance") {
+		return "food-allowance-form"
+	}
+	// fallback for other types or when type is empty
+	return "default-expense-form"
 })
 // object to store form data
 const expenseClaim = ref({

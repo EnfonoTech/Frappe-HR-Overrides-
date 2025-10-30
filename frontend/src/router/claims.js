@@ -15,6 +15,11 @@ const routes = [
 		component: () => import("@/views/trip_allowance/Form.vue"),
 	},
 	{
+		name: "FoodAllowanceFormView",
+		path: "/food-allowance/new",
+		component: () => import("@/views/food_allowance/Form.vue"),
+	},
+	{
 		name: "ExpenseClaimDetailView",
 		path: "/expense-claims/:id",
 		props: true,

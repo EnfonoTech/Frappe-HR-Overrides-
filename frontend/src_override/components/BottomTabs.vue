@@ -62,10 +62,6 @@ const tabItems = [
 		icon: SalaryIcon,
 		title: __("Salary"),
 		route: "/dashboard/salary-slips",
-	},{
-		icon: SalaryIcon,
-		title: __("CRM"),
-		route: "/dashboard/crm",
 	},
 	
 ]
